@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use std::fs::File;
 use std::io::Result;
 
-pub fn read_file_by_line(file_path: &str) -> Result<Vec<String>> {
+pub fn read_line(file_path: &str) -> Result<Vec<String>> {
     let file = File::open(file_path)?;
     let mmap = unsafe { Mmap::map(&file)? };
 
@@ -25,7 +25,7 @@ pub fn read_file_by_line(file_path: &str) -> Result<Vec<String>> {
     Ok(lines)
 }
 
-pub fn read_file_by_word(path: &str) -> Result<Vec<String>> {
+pub fn read_word(path: &str) -> Result<Vec<String>> {
     let file = File::open(path)?;
     let mmap = unsafe { Mmap::map(&file)? };
 
