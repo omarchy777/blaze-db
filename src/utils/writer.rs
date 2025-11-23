@@ -1,22 +1,45 @@
-use crate::utils::embedder::{EmbeddingJson};
+use crate::utils::embedder::{EmbeddingData, Embeddings};
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::task::spawn_blocking;
 
-pub async fn json_writer(embedding_json: EmbeddingJson, file_path: &str) -> Result<()> {
-    // Serialize in a blocking task to not block async runtime
-    let json_bytes = spawn_blocking(move || serde_json::to_vec_pretty(&embedding_json))
-        .await
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EmbeddingJson {
+    pub batch_index: usize,
+    pub items: Vec<EmbeddingData>,
+}
 
-    // Write asynchronously with large buffer
-    let file = File::create(file_path).await?;
-    let mut writer = BufWriter::with_capacity(16 * 1024 * 1024, file); // 16MB buffer
+impl EmbeddingJson {
+    pub fn new(batch_index: usize, items: Embeddings) -> Self {
+        Self {
+            batch_index,
+            items: items.data,
+        }
+    }
+    pub fn debug_print(&self) {
+        println!("Batch Index: {}", self.batch_index);
+        self.items.iter().take(3).for_each(|item| {
+            println!(
+                "Index: {:?}\n Chunk: {:?}\n Embeddings: {:?}\n Embedding Length: {:?}\n",
+                &item.index,
+                &item.chunk,
+                &item.embedding[..3],
+                &item.embedding.len(),
+            );
+        })
+    }
 
-    writer.write_all(&json_bytes).await?;
-    writer.flush().await?;
+    pub async fn json_writer(embedding_json: EmbeddingJson, file_path: &str) -> Result<()> {
+        // Serialize to bytes in a blocking task for minimal overhead
+        let json_bytes = spawn_blocking(move || serde_json::to_vec(&embedding_json)).await??;
 
-    Ok(())
+        let file = File::create(file_path).await?;
+        let mut writer = BufWriter::with_capacity(16 * 1024 * 1024, file); // 16MB buffer
+        writer.write_all(&json_bytes).await?;
+        writer.flush().await?;
+
+        Ok(())
+    }
 }

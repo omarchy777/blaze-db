@@ -1,3 +1,4 @@
 pub mod embedder;
-pub mod reader;
+pub mod error;
+pub mod ingestor;
 pub mod writer;
