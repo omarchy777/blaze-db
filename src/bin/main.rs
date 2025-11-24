@@ -2,7 +2,7 @@ use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelRefIterator;
-use vector_search::utils::{embedder, ingestor, writer};
+use blaze_db::utils::{embedder, ingestor, writer};
 
 #[tokio::main]
 async fn main() {
