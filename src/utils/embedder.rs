@@ -29,16 +29,17 @@ impl Provider {
         Provider { url, model }
     }
 
-    pub async fn fetch_embeddings(
-        self,
-        chunks: Vec<&String>,
-    ) -> Result<Embeddings, Error> {
+    pub async fn fetch_embeddings(&self, chunks: &Vec<String>) -> Result<Embeddings, Error> {
         let body = serde_json::json!({
-            "model": self.model,
+            "model": &self.model,
             "input": chunks,
         });
 
-        let response = reqwest::Client::new().post(self.url).json(&body).send().await?;
+        let response = reqwest::Client::new()
+            .post(&self.url)
+            .json(&body)
+            .send()
+            .await?;
 
         if !response.status().is_success() {
             return Err(Error::msg(format!(
@@ -49,6 +50,7 @@ impl Provider {
 
         let mut embeddings_response: Embeddings = response.json().await?;
 
+        // Fill in the chunk data for each embedding
         embeddings_response
             .data
             .iter_mut()
@@ -61,19 +63,23 @@ impl Provider {
                 }
             });
 
+        // Validate embeddings and log warnings if necessary
         embeddings_response.data.par_iter().for_each(|embedding| {
-            if embedding.index.is_negative() {
-                eprintln!(
-                    "Warning: Received embedding with -ve index for chunk: {}",
-                    embedding.chunk
-                );
-            }
-            if embedding.embedding.is_empty() {
-                eprintln!(
-                    "Warning: Received empty embedding for chunk index {}",
-                    embedding.index
-                );
-            }
+            assert!(
+                embedding.index >= 0,
+                "Invalid embedding index: {}",
+                embedding.index
+            );
+            assert!(
+                !embedding.embedding.len() > 0,
+                "Embedding vector is empty, Chunk Index: {}",
+                embedding.index
+            );
+            assert!(
+                !embedding.chunk.is_empty(),
+                "Data should be populated, Chunk Index: {}",
+                embedding.index
+            );
         });
 
         Ok(embeddings_response)
