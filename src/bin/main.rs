@@ -1,6 +1,6 @@
-use rayon::iter::ParallelIterator;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
+use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelRefIterator;
 use vector_search::utils::{embedder, ingestor, writer};
 

@@ -24,7 +24,7 @@ pub struct Provider {
 
 impl Provider {
     pub fn new(url: String, model: String) -> Provider {
-        assert!(model.len() > 0, "Model name cannot be empty");
+        assert!(!model.is_empty(), "Model name cannot be empty");
         assert!(url.starts_with("http"), "URL must start with http/https");
         Provider { url, model }
     }
