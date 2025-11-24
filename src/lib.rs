@@ -1,2 +1,2 @@
-mod search;
+mod core;
 pub mod utils;
