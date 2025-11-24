@@ -3,12 +3,12 @@ use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelRefIterator;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Embeddings {
     pub data: Vec<EmbeddingData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EmbeddingData {
     pub index: i32,
     #[serde(skip_deserializing)]
@@ -50,7 +50,7 @@ impl Provider {
 
         let mut embeddings_response: Embeddings = response.json().await?;
 
-        // Fill in the chunk data for each embedding
+        // Fill in the chunk sample for each embedding
         embeddings_response
             .data
             .iter_mut()
