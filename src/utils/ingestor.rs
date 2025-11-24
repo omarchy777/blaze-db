@@ -1,10 +1,11 @@
 use memmap2::Mmap;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Result;
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ingestor {
     pub source: PathBuf,
     pub batch_size: usize,
