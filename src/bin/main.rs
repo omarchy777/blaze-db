@@ -1,8 +1,8 @@
+use blaze_db::utils::{embedder, ingestor, storage};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelRefIterator;
-use blaze_db::utils::{embedder, ingestor, writer};
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +11,7 @@ async fn main() {
     let provider = embedder::Provider::new(url.into(), model.into());
 
     let batch_size: usize = 512;
-    let ingestor = ingestor::Ingestor::new("./data/WarAndPeace.txt".into(), batch_size);
+    let ingestor = ingestor::Ingestor::new("./sample/War_and_peace.txt".into(), batch_size);
 
     match ingestor::Ingestor::read_line(&ingestor) {
         Ok(batched_data) => {
@@ -32,10 +32,15 @@ async fn main() {
             for (index, chunk) in batched_data.iter().enumerate() {
                 match embedder::Provider::fetch_embeddings(&provider, chunk).await {
                     Ok(embeddings) => {
-                        let embedding_json = writer::EmbeddingJson::new(index, embeddings);
-                        embedding_json.debug_print();
-                        let filename = format!("./embeddings/embeddings_batch_{}.json", index);
-                        writer::EmbeddingJson::json_writer(embedding_json, &filename)
+                        let embedding_store = storage::EmbeddingStore::new(index, embeddings);
+                        embedding_store.debug_print();
+                        let filename = format!("./embeddings/embeddings_batch_{}.bin", index);
+                        //embedding_store
+                        //    .write_json(&filename)
+                        //    .await
+                        //   .expect("Failed to write embeddings to file");
+                        embedding_store
+                            .write_binary(&filename)
                             .await
                             .expect("Failed to write embeddings to file");
                         progress_bar.inc(1);
