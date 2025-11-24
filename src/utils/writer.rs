@@ -36,7 +36,7 @@ impl EmbeddingJson {
         let json_bytes = spawn_blocking(move || serde_json::to_vec(&embedding_json)).await??;
 
         let file = File::create(file_path).await?;
-        let mut writer = BufWriter::with_capacity(16 * 1024 * 1024, file); // 16MB buffer
+        let mut writer = BufWriter::with_capacity(8 * 1024 * 1024, file); // 8MB buffer
         writer.write_all(&json_bytes).await?;
         writer.flush().await?;
 
