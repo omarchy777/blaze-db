@@ -1,5 +1,4 @@
 use memmap2::Mmap;
-use rayon::current_num_threads;
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::Result;
@@ -21,21 +20,24 @@ impl Ingestor {
         Self { source, batch_size }
     }
 
-    pub fn read_line(self) -> Result<Vec<Vec<String>>> {
-        let file = File::open(self.source)?;
+    pub fn read_line(&self) -> Result<Vec<Vec<String>>> {
+        let file = File::open(&self.source)?;
         let mmap = unsafe { Mmap::map(&file)? };
 
-        // Split into chunks and process in parallel
-        let chunk_size = (mmap.len() / current_num_threads()).max(1024 * 1024);
-
         let lines: Vec<String> = mmap
-            .par_chunks(chunk_size)
-            .flat_map(|chunk| {
-                let s = String::from_utf8_lossy(chunk);
-                s.lines()
-                    .map(|line| line.trim().to_string())
-                    .filter(|line| !line.is_empty())
-                    .collect::<Vec<_>>()
+            .par_split(|b| *b == b'\n')
+            .filter_map(|line_bytes| {
+                if line_bytes.is_empty() {
+                    return None;
+                }
+                // Decode each line as UTF-8, ignoring invalid sequences
+                let s = String::from_utf8_lossy(line_bytes);
+                let s = s.trim();
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s.to_string())
+                }
             })
             .collect();
 
