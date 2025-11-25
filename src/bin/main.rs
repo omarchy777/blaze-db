@@ -1,19 +1,18 @@
-use blaze_db::utils::{embedder, ingestor, storage};
+use blaze_db::prelude::{EmbeddingStore, Ingestor, Provider};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
-use rayon::iter::ParallelIterator;
-use rayon::prelude::IntoParallelRefIterator;
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 #[tokio::main]
 async fn main() {
-    let url = "http://localhost:1234/v1/embeddings";
+    let url = "http://192.168.1.7:1234/v1/embeddings";
     let model = "text-embedding-qwen3-embedding-0.6b";
-    let provider = embedder::Provider::new(url.into(), model.into());
+    let provider = Provider::new(url, model);
 
-    let batch_size: usize = 512;
-    let ingestor = ingestor::Ingestor::new("./sample/War_and_peace.txt".into(), batch_size);
+    let batch_size = 2048;
+    let ingestor = Ingestor::new("./sample/War_and_peace.txt", batch_size);
 
-    match ingestor::Ingestor::read_line(&ingestor) {
+    match ingestor.read_line() {
         Ok(batched_data) => {
             let total_lines: usize = batched_data.par_iter().map(|b| b.len()).sum();
             println!();
@@ -25,24 +24,19 @@ async fn main() {
             let progress_bar = ProgressBar::new(batched_data.len().max(1) as u64);
             progress_bar.set_style(
                 ProgressStyle::with_template("[{bar:40.cyan/blue}] {pos}/{len} batches")
-                    .unwrap()
+                    .expect("Invalid progress template")
                     .progress_chars("##>-"),
             );
 
             for (index, chunk) in batched_data.iter().enumerate() {
-                match embedder::Provider::fetch_embeddings(&provider, chunk).await {
+                match provider.fetch_embeddings(chunk).await {
                     Ok(embeddings) => {
-                        let embedding_store = storage::EmbeddingStore::new(index, embeddings);
+                        let embedding_store = EmbeddingStore::new(index, embeddings.data);
                         embedding_store.debug_print();
-                        let filename = format!("./embeddings/embeddings_batch_{}.bin", index);
-                        //embedding_store
-                        //    .write_json(&filename)
-                        //    .await
-                        //   .expect("Failed to write embeddings to file");
-                        embedding_store
-                            .write_binary(&filename)
-                            .await
-                            .expect("Failed to write embeddings to file");
+                        let filename = format!("./embeddings/embeddings_batch_{}.json", index);
+                        if let Err(e) = embedding_store.write_json(&filename).await {
+                            eprintln!("Failed to write embeddings to file: {}", e);
+                        }
                         progress_bar.inc(1);
                     }
                     Err(e) => {
@@ -53,7 +47,7 @@ async fn main() {
         }
 
         Err(e) => {
-            eprintln!("Error reading lines: ({})", e);
+            eprintln!("Error reading lines: {}", e);
         }
     }
 }
