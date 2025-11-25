@@ -12,7 +12,8 @@ pub struct Ingestor {
 }
 
 impl Ingestor {
-    pub fn new(source: PathBuf, batch_size: usize) -> Self {
+    pub fn new(source: impl Into<PathBuf>, batch_size: usize) -> Self {
+        let source = source.into();
         assert_eq!(batch_size % 8, 0, "Batch size must be a multiple of 8");
         assert!(
             source.exists() && source.is_file(),
@@ -26,19 +27,14 @@ impl Ingestor {
         let mmap = unsafe { Mmap::map(&file)? };
 
         let lines: Vec<String> = mmap
-            .par_split(|b| *b == b'\n')
+            .par_split(|&b| b == b'\n')
             .filter_map(|line_bytes| {
                 if line_bytes.is_empty() {
                     return None;
                 }
                 // Decode each line as UTF-8, ignoring invalid sequences
-                let s = String::from_utf8_lossy(line_bytes);
-                let s = s.trim();
-                if s.is_empty() {
-                    None
-                } else {
-                    Some(s.to_string())
-                }
+                let s = String::from_utf8_lossy(line_bytes).trim().to_string();
+                if s.is_empty() { None } else { Some(s) }
             })
             .collect();
 
