@@ -44,7 +44,7 @@ impl EmbeddingStore {
     }
 
     /// Load multiple binary files from a directory
-    pub async fn read_binary(&self, dir_path: &str) -> Result<VectorData> {
+    pub async fn read_binary(dir_path: &str) -> Result<VectorData> {
         let bin_files: Vec<PathBuf> = fs::read_dir(dir_path)
             .with_context(|| format!("Failed to read directory: {:?}", dir_path))?
             .filter_map(|entry| entry.ok())

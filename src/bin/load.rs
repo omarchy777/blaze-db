@@ -4,11 +4,8 @@ use colored::Colorize;
 #[tokio::main]
 async fn main() {
     println!();
-
-    // Create an empty store
-    let store = EmbeddingStore::new(0, vec![]);
-
-    match store.read_binary("./embeddings").await {
+    
+    match EmbeddingStore::read_binary("./embeddings").await {
         Ok(vector_data) => {
             println!("{}", "Successfully loaded embeddings".green().bold());
             println!();
