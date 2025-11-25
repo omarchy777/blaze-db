@@ -5,7 +5,7 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 #[tokio::main]
 async fn main() {
-    let url = "http://192.168.1.7:1234/v1/embeddings";
+    let url = "http://localhost:1234/v1/embeddings";
     let model = "text-embedding-qwen3-embedding-0.6b";
     let provider = Provider::new(url, model);
 

@@ -1,5 +1,5 @@
 use anyhow::{Error, Result};
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -25,8 +25,15 @@ impl Provider {
     pub fn new(url: impl Into<String>, model: impl Into<String>) -> Self {
         let url = url.into();
         let model = model.into();
-        assert!(!model.is_empty(), "Model name cannot be empty");
-        assert!(url.starts_with("http"), "URL must start with http/https");
+        if model.is_empty() {
+            // Default model if none provided
+            let default_model = "text-embedding-nomic-embed-text-v1.5";
+            println!("Model not provided. Using default model: {}", default_model);
+            return Self {
+                url,
+                model: default_model.to_string(),
+            };
+        }
         Self { url, model }
     }
 
@@ -64,24 +71,12 @@ impl Provider {
                 }
             });
 
-        // Validate embeddings
-        embeddings_response.data.par_iter().for_each(|embedding| {
-            assert!(
-                embedding.index >= 0,
-                "Invalid embedding index: {}",
-                embedding.index
-            );
-            assert!(
-                !embedding.embedding.is_empty(),
-                "Embedding vector is empty, Chunk Index: {}",
-                embedding.index
-            );
-            assert!(
-                !embedding.chunk.is_empty(),
-                "Data should be populated, Chunk Index: {}",
-                embedding.index
-            );
-        });
+        // Validate & filter embeddings
+        embeddings_response.data = embeddings_response
+            .data
+            .into_par_iter()
+            .filter(|embedding| embedding.index >= 0 && !embedding.embedding.is_empty())
+            .collect();
 
         Ok(embeddings_response)
     }
