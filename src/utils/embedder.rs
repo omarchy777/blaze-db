@@ -9,10 +9,12 @@ pub struct Embeddings {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EmbeddingData {
-    pub index: i32,
+    pub index: usize,
     #[serde(skip_deserializing)]
     pub chunk: String,
     pub embedding: Vec<f64>,
+    #[serde(skip_deserializing)]
+    pub dimensions: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -58,25 +60,23 @@ impl Provider {
 
         let mut embeddings_response: Embeddings = response.json().await?;
 
-        // Fill in the chunk for each embedding
-        embeddings_response
-            .data
-            .iter_mut()
-            .enumerate()
-            .for_each(|(index, embedding)| {
-                if let Some(chunk) = chunks.get(index) {
-                    embedding.chunk = chunk.to_string();
-                } else {
-                    embedding.chunk = String::from("");
-                }
-            });
-
         // Validate & filter embeddings
         embeddings_response.data = embeddings_response
             .data
             .into_par_iter()
-            .filter(|embedding| embedding.index >= 0 && !embedding.embedding.is_empty())
+            .filter(|embedding| !embedding.embedding.is_empty())
             .collect();
+
+        // Fill in the chunk & dimensions for each embedding
+        embeddings_response.data.iter_mut().for_each(|embedding| {
+            if let Some(chunk) = chunks.get(embedding.index) {
+                embedding.chunk = chunk.to_string();
+            } else {
+                embedding.chunk = String::from("");
+            }
+
+            embedding.dimensions = embedding.embedding.len();
+        });
 
         Ok(embeddings_response)
     }

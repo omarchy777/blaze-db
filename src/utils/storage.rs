@@ -25,7 +25,7 @@ impl EmbeddingStore {
                 &item.index,
                 &item.chunk,
                 &item.embedding[..3],
-                &item.embedding.len(),
+                &item.dimensions,
             );
         });
     }
