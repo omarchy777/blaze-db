@@ -1,6 +1,5 @@
 use anyhow::{Error, Result};
-use rayon::iter::ParallelIterator;
-use rayon::prelude::IntoParallelRefIterator;
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -23,13 +22,15 @@ pub struct Provider {
 }
 
 impl Provider {
-    pub fn new(url: String, model: String) -> Provider {
+    pub fn new(url: impl Into<String>, model: impl Into<String>) -> Self {
+        let url = url.into();
+        let model = model.into();
         assert!(!model.is_empty(), "Model name cannot be empty");
         assert!(url.starts_with("http"), "URL must start with http/https");
-        Provider { url, model }
+        Self { url, model }
     }
 
-    pub async fn fetch_embeddings(&self, chunks: &Vec<String>) -> Result<Embeddings, Error> {
+    pub async fn fetch_embeddings(&self, chunks: &[String]) -> Result<Embeddings> {
         let body = serde_json::json!({
             "model": &self.model,
             "input": chunks,
@@ -50,7 +51,7 @@ impl Provider {
 
         let mut embeddings_response: Embeddings = response.json().await?;
 
-        // Fill in the chunk sample for each embedding
+        // Fill in the chunk for each embedding
         embeddings_response
             .data
             .iter_mut()
@@ -63,7 +64,7 @@ impl Provider {
                 }
             });
 
-        // Validate embeddings and log warnings if necessary
+        // Validate embeddings
         embeddings_response.data.par_iter().for_each(|embedding| {
             assert!(
                 embedding.index >= 0,
@@ -71,7 +72,7 @@ impl Provider {
                 embedding.index
             );
             assert!(
-                !embedding.embedding.len() > 0,
+                !embedding.embedding.is_empty(),
                 "Embedding vector is empty, Chunk Index: {}",
                 embedding.index
             );
