@@ -10,10 +10,10 @@ pub struct Embeddings {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EmbeddingData {
     pub index: usize,
-    #[serde(skip_deserializing)]
+    #[serde(default)]
     pub chunk: String,
-    pub embedding: Vec<f64>,
-    #[serde(skip_deserializing)]
+    pub embedding: Vec<f32>,
+    #[serde(default)]
     pub dimensions: usize,
 }
 
@@ -39,6 +39,7 @@ impl Provider {
         Self { url, model }
     }
 
+    /// Fetch embeddings for the given chunks of text
     pub async fn fetch_embeddings(&self, chunks: &[String]) -> Result<Embeddings> {
         let body = serde_json::json!({
             "model": &self.model,
