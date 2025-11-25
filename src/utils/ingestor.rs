@@ -22,6 +22,7 @@ impl Ingestor {
         Self { source, batch_size }
     }
 
+    /// Read lines from the source file and batch them
     pub fn read_line(&self) -> Result<Vec<Vec<String>>> {
         let file = File::open(&self.source)?;
         let mmap = unsafe { Mmap::map(&file)? };
