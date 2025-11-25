@@ -1,8 +1,8 @@
 use bencher::{Bencher, benchmark_group, benchmark_main};
-use blaze_db::utils::ingestor::Ingestor;
+use blaze_db::prelude::Ingestor;
 
 fn my_bench(b: &mut Bencher) {
-    let ingest = Ingestor::new("./sample/War_and_peace.txt".into(), 512);
+    let ingest = Ingestor::new("./sample/War_and_peace.txt", 512);
     b.iter(|| {
         Ingestor::read_line(&ingest).expect("Bad Thing");
     });
