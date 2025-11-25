@@ -1,2 +1,6 @@
 mod core;
-pub mod utils;
+mod utils;
+
+pub mod prelude {
+    pub use crate::utils::{EmbeddingStore, Ingestor, Provider};
+}
