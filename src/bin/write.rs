@@ -33,8 +33,8 @@ async fn main() {
                     Ok(embeddings) => {
                         let embedding_store = EmbeddingStore::new(index, embeddings.data);
                         embedding_store.debug_print();
-                        let filename = format!("./embeddings/embeddings_batch_{}.json", index);
-                        if let Err(e) = embedding_store.write_json(&filename).await {
+                        let filename = format!("./embeddings/embeddings_batch_{}", index);
+                        if let Err(e) = embedding_store.write_binary(&filename).await {
                             eprintln!("Failed to write embeddings to file: {}", e);
                         }
                         progress_bar.inc(1);
