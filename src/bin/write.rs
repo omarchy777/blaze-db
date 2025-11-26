@@ -9,7 +9,7 @@ async fn main() {
     let model = "text-embedding-qwen3-embedding-0.6b";
     let provider = Provider::new(url, model);
 
-    let batch_size = 2048;
+    let batch_size = 1024;
     let ingestor = Ingestor::new("./sample/War_and_peace.txt", batch_size);
 
     match ingestor.read_line() {

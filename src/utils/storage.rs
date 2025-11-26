@@ -144,11 +144,9 @@ impl EmbeddingStore {
             .with_context(|| format!("Failed to read file: {:?}", path_clone))?;
 
         let path_for_error = path_clone.clone();
-        let store: EmbeddingStore = spawn_blocking(move || {
-            bincode::deserialize(&bytes)
-        })
-        .await?
-        .with_context(|| format!("Failed to deserialize: {:?}", path_for_error))?;
+        let store: EmbeddingStore = spawn_blocking(move || bincode::deserialize(&bytes))
+            .await?
+            .with_context(|| format!("Failed to deserialize: {:?}", path_for_error))?;
 
         Ok(store)
     }
