@@ -2,21 +2,47 @@ use anyhow::{Context, Result};
 use rayon::iter::ParallelIterator;
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use tokio::fs;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::task::spawn_blocking;
 
 use crate::utils::EmbeddingData;
 
-///
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VectorData {
     pub chunk: Vec<String>,
     pub embedding: Vec<Vec<f32>>,
     pub dimensions: usize,
     pub total_vectors: usize,
+}
+
+impl VectorData {
+    /// Get a specific vector by index
+    pub fn get_vector(&self, index: usize) -> Option<&[f32]> {
+        self.embedding.get(index).map(|v| v.as_slice())
+    }
+
+    /// Get text chunk by index
+    pub fn get_chunk(&self, index: usize) -> Option<&str> {
+        self.chunk.get(index).map(|s| s.as_str())
+    }
+
+    /// Memory usage estimate in MB
+    pub fn memory_usage_mb(&self) -> f64 {
+        let vector_bytes: usize = self
+            .embedding
+            .par_iter()
+            .map(|emb| emb.len() * size_of::<f32>())
+            .sum();
+        let metadata_bytes: usize = self
+            .chunk
+            .par_iter()
+            .map(|c| c.len() * size_of::<u8>())
+            .sum();
+        (vector_bytes + metadata_bytes) as f64 / (1024.0 * 1024.0)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -45,17 +71,23 @@ impl EmbeddingStore {
 
     /// Load multiple binary files from a directory
     pub async fn read_binary(dir_path: &str) -> Result<VectorData> {
-        let bin_files: Vec<PathBuf> = fs::read_dir(dir_path)
-            .with_context(|| format!("Failed to read directory: {:?}", dir_path))?
-            .filter_map(|entry| entry.ok())
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|ext| ext == "bin")
-                    .unwrap_or(false)
-            })
-            .collect();
+        // Read directory to get all .bin files
+        let mut read_dir = fs::read_dir(dir_path)
+            .await
+            .with_context(|| format!("Failed to read directory: {:?}", dir_path))?;
+
+        let mut bin_files = Vec::new();
+        while let Some(entry) = read_dir.next_entry().await? {
+            let path = entry.path();
+            if path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext == "bin")
+                .unwrap_or(false)
+            {
+                bin_files.push(path);
+            }
+        }
 
         if bin_files.is_empty() {
             anyhow::bail!("No .bin files found in {:?}", dir_path);
@@ -63,16 +95,28 @@ impl EmbeddingStore {
 
         println!("Found {} binary files to load...", bin_files.len());
 
-        let stores: Vec<EmbeddingStore> = bin_files
-            .par_iter()
-            .filter_map(|path| match Self::read_binary_file(path) {
-                Ok(store) => Some(store),
-                Err(e) => {
-                    eprintln!("Failed to load {:?}: {}", path, e);
-                    None
+        // Load all files concurrently using tokio tasks
+        let mut tasks = Vec::new();
+        for path in bin_files {
+            let task = tokio::spawn(async move {
+                match Self::read_binary_file(&path).await {
+                    Ok(store) => Some(store),
+                    Err(e) => {
+                        eprintln!("Failed to load {:?}: {}", path, e);
+                        None
+                    }
                 }
-            })
-            .collect();
+            });
+            tasks.push(task);
+        }
+
+        // Await all tasks and collect results
+        let mut stores = Vec::new();
+        for task in tasks {
+            if let Ok(Some(store)) = task.await {
+                stores.push(store);
+            }
+        }
 
         // Flatten all items from all stores in parallel
         let (all_chunks, all_embeddings): (Vec<String>, Vec<Vec<f32>>) = stores
@@ -93,42 +137,20 @@ impl EmbeddingStore {
     }
 
     /// Load from a single binary file
-    fn read_binary_file(path: &Path) -> Result<EmbeddingStore> {
-        let bytes = fs::read(path).with_context(|| format!("Failed to read file: {:?}", path))?;
+    pub async fn read_binary_file(path: &Path) -> Result<EmbeddingStore> {
+        let path_clone = path.to_path_buf();
+        let bytes = fs::read(&path_clone)
+            .await
+            .with_context(|| format!("Failed to read file: {:?}", path_clone))?;
 
-        let store: EmbeddingStore = bincode::deserialize(&bytes)
-            .with_context(|| format!("Failed to deserialize: {:?}", path))?;
+        let path_for_error = path_clone.clone();
+        let store: EmbeddingStore = spawn_blocking(move || {
+            bincode::deserialize(&bytes)
+        })
+        .await?
+        .with_context(|| format!("Failed to deserialize: {:?}", path_for_error))?;
 
         Ok(store)
-    }
-
-    /// Get a specific vector by index
-    pub fn get_vector(&self, index: usize) -> Option<&[f32]> {
-        self.items.get(index).map(|item| item.embedding.as_slice())
-    }
-
-    /// Get text chunk by index
-    pub fn get_chunk(&self, index: usize) -> Option<&str> {
-        self.items.get(index).map(|item| item.chunk.as_str())
-    }
-
-    /// Memory usage estimate in MB
-    pub fn memory_usage_mb(&self) -> f64 {
-        let vector_bytes: usize = self
-            .items
-            .par_iter()
-            .map(|item| item.embedding.len() * size_of::<f32>())
-            .sum();
-        let metadata_bytes: usize = self
-            .items
-            .par_iter()
-            .map(|item| {
-                item.chunk.len() * size_of::<u8>()
-                    + size_of::<usize>() // for index
-                    + size_of::<usize>() // for dimensions
-            })
-            .sum();
-        (vector_bytes + metadata_bytes) as f64 / (1024.0 * 1024.0)
     }
 
     /// Write the embedding store to a binary file
@@ -140,7 +162,7 @@ impl EmbeddingStore {
 
         let formatted_path = format!("{}.bin", file_path);
         let file = File::create(formatted_path).await?;
-        let mut writer = BufWriter::new(file);
+        let mut writer = BufWriter::with_capacity(1024 * 1024, file);
         writer.write_all(&encoded).await?;
         writer.flush().await?;
 
@@ -154,7 +176,7 @@ impl EmbeddingStore {
 
         let formatted_path = format!("{}.json", file_path);
         let file = File::create(formatted_path).await?;
-        let mut writer = BufWriter::with_capacity(8 * 1024 * 1024, file);
+        let mut writer = BufWriter::with_capacity(1024 * 1024, file);
         writer.write_all(&json_bytes).await?;
         writer.flush().await?;
 
