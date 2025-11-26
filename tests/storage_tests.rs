@@ -49,7 +49,7 @@ async fn test_write_read_binary() {
 
     // Read binary back
     let binary_path = format!("{}.bin", file_path.to_str().unwrap());
-    let loaded_store = EmbeddingStore::read_binary_file(&std::path::Path::new(&binary_path))
+    let loaded_store = EmbeddingStore::read_binary_file(std::path::Path::new(&binary_path))
         .await
         .unwrap();
 

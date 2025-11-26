@@ -86,7 +86,7 @@ fn test_read_lines_empty_lines() {
     let file_path = dir.path().join("test.txt");
     let mut file = File::create(&file_path).unwrap();
     writeln!(file, "line 1").unwrap();
-    writeln!(file, "").unwrap(); // Empty line
+    writeln!(file).unwrap(); // Empty line
     writeln!(file, "   ").unwrap(); // Whitespace only line
     writeln!(file, "line 4").unwrap();
 

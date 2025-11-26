@@ -49,7 +49,7 @@ async fn test_ingest_to_storage_pipeline() {
     assert!(std::path::Path::new(&binary_path).exists());
 
     // Load and verify
-    let loaded_store = EmbeddingStore::read_binary_file(&std::path::Path::new(&binary_path))
+    let loaded_store = EmbeddingStore::read_binary_file(std::path::Path::new(&binary_path))
         .await
         .unwrap();
 
@@ -222,7 +222,7 @@ async fn test_unicode_text_processing() {
         .unwrap();
 
     let binary_path = format!("{}.bin", output_path.to_str().unwrap());
-    let loaded_store = EmbeddingStore::read_binary_file(&std::path::Path::new(&binary_path))
+    let loaded_store = EmbeddingStore::read_binary_file(std::path::Path::new(&binary_path))
         .await
         .unwrap();
 
@@ -271,7 +271,7 @@ async fn test_large_embedding_dimensions() {
         .unwrap();
 
     let binary_path = format!("{}.bin", output_path.to_str().unwrap());
-    let loaded_store = EmbeddingStore::read_binary_file(&std::path::Path::new(&binary_path))
+    let loaded_store = EmbeddingStore::read_binary_file(std::path::Path::new(&binary_path))
         .await
         .unwrap();
 

@@ -48,8 +48,8 @@ impl SearchQuery {
         });
 
         // Return top_k results
-        let top_results = results.into_iter().take(self.top_k).collect();
-        top_results
+        
+        results.into_iter().take(self.top_k).collect()
     }
 }
 
