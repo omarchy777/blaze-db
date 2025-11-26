@@ -22,6 +22,7 @@ embeddings.
 - Product quantization for memory optimization.
 - HTTP API server for remote database access.
 - Query filtering and metadata support.
+- CLI client for database management.
 - Incremental updates without full reindex.
 - Distributed storage and sharding support.
 
