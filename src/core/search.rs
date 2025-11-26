@@ -1,4 +1,6 @@
 use crate::utils::VectorData;
+use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+use rayon::prelude::IntoParallelRefIterator;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -27,7 +29,7 @@ impl SearchQuery {
     pub fn search(&self, data: &VectorData) -> Vec<SearchResult> {
         let mut results: Vec<SearchResult> = data
             .embedding
-            .iter()
+            .par_iter()
             .enumerate()
             .map(|(idx, vector)| {
                 let score = self.metric.calculate(&self.query_vector, vector);
@@ -48,7 +50,6 @@ impl SearchQuery {
         });
 
         // Return top_k results
-        
         results.into_iter().take(self.top_k).collect()
     }
 }
