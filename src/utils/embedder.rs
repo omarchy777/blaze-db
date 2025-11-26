@@ -39,6 +39,11 @@ impl Provider {
         Self { url, model }
     }
 
+    /// Fetch embedding for a single piece of text
+    pub async fn fetch_embedding(&self, text: &str) -> Result<Embeddings> {
+        self.fetch_embeddings(&[text.to_string()]).await
+    }
+
     /// Fetch embeddings for the given chunks of text
     pub async fn fetch_embeddings(&self, chunks: &[String]) -> Result<Embeddings> {
         let body = serde_json::json!({

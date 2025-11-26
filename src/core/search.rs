@@ -57,6 +57,7 @@ impl SearchQuery {
 pub enum Metrics {
     Cosine,
     Euclidean,
+    DotProduct,
 }
 
 impl Metrics {
@@ -64,6 +65,7 @@ impl Metrics {
         match self {
             Metrics::Cosine => cosine_similarity(a, b),
             Metrics::Euclidean => euclidean_similarity(a, b),
+            Metrics::DotProduct => dot_product(a, b),
         }
     }
 }
@@ -103,4 +105,10 @@ pub fn euclidean_similarity(a: &[f32], b: &[f32]) -> f32 {
         .sum();
 
     1.0 / (1.0 + distance_sq.sqrt())
+}
+
+/// Dot product similarity (for normalized vectors)
+pub fn dot_product(a: &[f32], b: &[f32]) -> f32 {
+    debug_assert_eq!(a.len(), b.len(), "Vector dimensions must match");
+    a.iter().zip(b.iter()).map(|(&x, &y)| x * y).sum()
 }
