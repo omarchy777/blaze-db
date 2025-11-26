@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
@@ -53,10 +53,7 @@ impl Provider {
             .await?;
 
         if !response.status().is_success() {
-            return Err(Error::msg(format!(
-                "Failed to fetch embeddings, Status: {}",
-                response.status()
-            )));
+            anyhow::bail!("Failed to fetch embeddings: HTTP {}", response.status());
         }
 
         let mut embeddings_response: Embeddings = response.json().await?;
