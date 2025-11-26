@@ -4,30 +4,28 @@ use colored::Colorize;
 #[tokio::main]
 async fn main() {
     println!();
-    
+
     match EmbeddingStore::read_binary("./embeddings").await {
         Ok(vector_data) => {
             println!("{}", "Successfully loaded embeddings".green().bold());
             println!();
             println!("{}", "Stats:".yellow().bold());
             println!(
-                "  • Total vectors: {}",
+                " Total vectors: {}",
                 vector_data.total_vectors.to_string().cyan()
             );
+            println!(" Dimensions: {}", vector_data.dimensions.to_string().cyan());
             println!(
-                "  • Dimensions: {}",
-                vector_data.dimensions.to_string().cyan()
-            );
-            println!(
-                "  • Total chunks: {}",
+                " Total chunks: {}",
                 vector_data.chunk.len().to_string().cyan()
             );
+            println!("  Memory Usage: {}MB", vector_data.memory_usage_mb());
             println!();
 
             // Display sample data
             if !vector_data.chunk.is_empty() {
                 println!(" {}", "Sample Data (first 3 items):".yellow().bold());
-                for (i, (chunk, embedding)) in vector_data
+                for (index, (chunk, embedding)) in vector_data
                     .chunk
                     .iter()
                     .zip(vector_data.embedding.iter())
@@ -35,7 +33,7 @@ async fn main() {
                     .enumerate()
                 {
                     println!();
-                    println!("  {} {}", "Item".blue(), i);
+                    println!("  {} {}", "Item".blue(), index);
                     println!(
                         "    Chunk: {}",
                         chunk.chars().take(60).collect::<String>().cyan()
