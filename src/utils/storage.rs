@@ -166,18 +166,4 @@ impl EmbeddingStore {
 
         Ok(())
     }
-
-    /// Write the embedding store to a JSON file
-    pub async fn write_json(&self, file_path: &str) -> Result<()> {
-        let self_clone = self.clone();
-        let json_bytes = spawn_blocking(move || serde_json::to_vec(&self_clone)).await??;
-
-        let formatted_path = format!("{}.json", file_path);
-        let file = File::create(formatted_path).await?;
-        let mut writer = BufWriter::with_capacity(1024 * 1024, file);
-        writer.write_all(&json_bytes).await?;
-        writer.flush().await?;
-
-        Ok(())
-    }
 }
