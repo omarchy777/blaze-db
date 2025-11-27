@@ -9,7 +9,7 @@ async fn main() {
     let model = "text-embedding-qwen3-embedding-0.6b";
     let provider = Provider::new(url, model);
 
-    let batch_size = 1024;
+    let batch_size = 512;
     let ingestor = Ingestor::new("./sample/War_and_peace.txt", batch_size);
 
     match ingestor.read_line() {
@@ -19,6 +19,19 @@ async fn main() {
             println!("Batch size: {}", batch_size.to_string().cyan());
             println!("Total batch: {}", batched_data.len().to_string().blue());
             println!("Total Lines: {}", total_lines.to_string().green());
+            println!();
+
+            // Estimate total size
+            let embedding_dim = 1024;
+            let size_per_vector = embedding_dim * 4;
+            let metadata_overhead = 32;
+            let estimated_size =
+                (total_lines * size_per_vector) + (batched_data.len() * metadata_overhead);
+
+            println!(
+                "Estimated size: {:.2} MB",
+                (estimated_size as f64) / (1024.0 * 1024.0)
+            );
             println!();
 
             let progress_bar = ProgressBar::new(batched_data.len().max(1) as u64);

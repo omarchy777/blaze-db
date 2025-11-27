@@ -1,7 +1,8 @@
 use blaze_db::prelude::*;
+use tokio::time::Instant;
 #[tokio::main]
 pub async fn main() {
-    let sample_text = "There is no Peace without War.";
+    let sample_text = "There is no Peace without War,\nWars should be celebrated,\nBecause it is the win against the evil.";
     let chunks = vec![sample_text.to_string()];
 
     let provider = Provider::new(
@@ -13,8 +14,10 @@ pub async fn main() {
         Ok(embeddings) => {
             for embedding in embeddings.data.clone() {
                 println!("Chunk: {}", &embedding.chunk);
-                println!("Embedding: {:?}", &embedding.embedding[..3]);
+                println!("Embedding (First 3): {:?}", &embedding.embedding[..3]);
             }
+
+            let start = Instant::now();
 
             let vector_data = EmbeddingStore::read_binary("./embeddings").await.unwrap();
 
@@ -29,6 +32,12 @@ pub async fn main() {
                 println!("Chunk: {}", item.chunk);
                 println!("Score: {:.4}", item.score);
             }
+
+            let duration = start.elapsed();
+            println!(
+                "Search took: {:?} for {} vectors",
+                duration, vector_data.total_vectors
+            );
         }
         Err(e) => {
             eprintln!("Error fetching embeddings: {}", e);
