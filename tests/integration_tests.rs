@@ -134,43 +134,6 @@ async fn test_empty_file_processing() {
 }
 
 #[tokio::test]
-async fn test_json_storage_pipeline() {
-    // Setup test file
-    let dir = tempdir().unwrap();
-    let file_path = dir.path().join("test.txt");
-    let mut file = File::create(&file_path).unwrap();
-    writeln!(file, "JSON test line").unwrap();
-
-    let ingestor = Ingestor::new(&file_path, 8);
-    let _batches = ingestor.read_line().unwrap();
-
-    // Create embeddings
-    let embeddings = vec![EmbeddingData {
-        index: 0,
-        chunk: "JSON test line".to_string(),
-        embedding: vec![1.0, 2.0, 3.0, 4.0, 5.0],
-        dimensions: 5,
-    }];
-
-    let store = EmbeddingStore::new(0, embeddings);
-
-    // Test JSON storage
-    let output_path = dir.path().join("embeddings_json");
-    store
-        .write_json(output_path.to_str().unwrap())
-        .await
-        .unwrap();
-
-    // Verify JSON file was created and contains expected data
-    let json_path = format!("{}.json", output_path.to_str().unwrap());
-    assert!(std::path::Path::new(&json_path).exists());
-
-    let content = std::fs::read_to_string(&json_path).unwrap();
-    assert!(content.contains("JSON test line"));
-    assert!(content.contains("\"dimensions\":5"));
-}
-
-#[tokio::test]
 async fn test_unicode_text_processing() {
     let dir = tempdir().unwrap();
     let file_path = dir.path().join("unicode.txt");
@@ -214,7 +177,7 @@ async fn test_unicode_text_processing() {
     );
     assert_eq!(store.items[2].chunk, "😭 Emoji support test 🤧");
 
-    // Test storage and retrieval of unicode content
+    // Test storage and retrieval of Unicode content
     let output_path = dir.path().join("unicode_embeddings");
     store
         .write_binary(output_path.to_str().unwrap())

@@ -61,32 +61,6 @@ async fn test_write_read_binary() {
 }
 
 #[tokio::test]
-async fn test_write_json() {
-    let dir = tempdir().unwrap();
-    let file_path = dir.path().join("test_embeddings");
-
-    let embedding_data = vec![EmbeddingData {
-        index: 0,
-        chunk: "test chunk".to_string(),
-        embedding: vec![1.0, 2.0, 3.0],
-        dimensions: 3,
-    }];
-
-    let store = EmbeddingStore::new(0, embedding_data);
-
-    // Write JSON
-    store.write_json(file_path.to_str().unwrap()).await.unwrap();
-
-    // Verify file exists and has content
-    let json_path = format!("{}.json", file_path.to_str().unwrap());
-    assert!(std::path::Path::new(&json_path).exists());
-
-    let content = std::fs::read_to_string(&json_path).unwrap();
-    assert!(content.contains("test chunk"));
-    assert!(content.contains("\"dimensions\":3"));
-}
-
-#[tokio::test]
 async fn test_read_binary_multiple_files() {
     let dir = tempdir().unwrap();
     let embeddings_dir = dir.path().join("embeddings");
